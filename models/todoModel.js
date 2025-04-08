@@ -8,7 +8,7 @@ const todoSchema = new mongoose.Schema(
             trim : true
         },
         todo_list : {
-            type : Array,
+            type : String,
             require : true,
             trim : true
         },
