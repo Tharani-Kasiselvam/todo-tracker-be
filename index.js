@@ -2,6 +2,7 @@ const express = require('express')
 const dotenv = require('dotenv')
 const mongoose = require('mongoose')
 const morgan = require('morgan')
+const cors = require('cors')
 
 const todoRoutes = require('./routes/todoRoutes.js')
 
@@ -12,6 +13,7 @@ dotenv.config()
 
 app.use(express.json())
 app.use(morgan('dev'))
+app.use(cors())
 
 //routes
 app.use("/api/v1", todoRoutes)

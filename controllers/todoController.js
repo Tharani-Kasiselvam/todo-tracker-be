@@ -8,15 +8,15 @@ const todoController = {
         if (!todo_title || !todo_list || !target_date)
             return res.status(400).json({ message: "Kindly provide values for all the fields" })
 
-        //manually created ## It has to be captured from the frontend cookie info
+        //manually created
         const id = "67f149e115234418a0fe8645"
 
         try {
 
             const userData = await userSchema.findById(id)
 
-            if(!userData)
-                return res.status(400).json({message:"Invalid User"})
+            if (!userData)
+                return res.status(400).json({ message: "Invalid User" })
 
             console.log(userData)
 
@@ -54,52 +54,90 @@ const todoController = {
         const { id } = req.params
         const { todo_title, todo_list, todo_status, target_date } = req.body
 
-        console.log("latest:",todo_title)
-        
-        const userId = "67f3258715234418a0fe8649"
+        console.log("latest:", todo_title)
+
+
+        //manually created
+        const userId = "67f149e115234418a0fe8645"
 
         console.log("#ID#: ", id)
+        console.log("#userId#: ", userId)
+
         try {
-            const userData = await userSchema.findById(userId)
+            const userData = await userSchema.findById(userId);
 
-            if(!userData)
-                return res.status(400).json({message:"Invalid User"})
-            console.log(userData)
+            if (!userData) {
+                return res.status(404).json({ message: "Invalid User" });
+            }
 
-            const todoData = await todoSchema.findById(id)
+            const existing_todoData = await todoSchema.findById(id)
+            const isUserTodo = await todoSchema.findOne({_id: id, user : userId})
 
-            if(!todoData)
-                return res.status(400).json({message:"Invalid Todo Data"})
+            console.log("IsUserTodo:", isUserTodo)
 
-            console.log(todoData)
+            if (!existing_todoData || !isUserTodo)
+                return res.status(400).json({ message: "Invalid Todo Data" })
+
+            console.log("Existing todoData:", existing_todoData)
 
             let curr_date = new Date()
+            const dateValue = (target_date ? target_date : existing_todoData.target_date)
+            const titleValue = (todo_title ? todo_title : existing_todoData.todo_title)
+
+            console.log("updated Tar dateValue:", dateValue, "CURR dt:", curr_date)
 
             //Validate Target Date with Current Date
-            if (new Date(target_date) < new Date(curr_date))
+            if (dateValue && new Date(dateValue) < new Date(curr_date)) {
+                // dateValue = target_date
+                console.log("**inside if of taraget date validation**")
                 return res.status(400).json({ message: "Target Date is a Past date, kindly verify" })
+            }
 
-            //Validates Duplication of Todo Title
-            // const title_data = await todoSchema.find({ todo_title: todo_title })
-            // const filter_title_data = title_data.filter(t_data => t_data.todo_title == todo_title &&
-            //     new Date(t_data.target_date).toDateString() == new Date(target_date).toDateString())
+            // Validation of Duplicate Todo Title
+            console.log("updated title:", todo_title, "EXISTING title:", titleValue)
+            const title_data = await todoSchema.find({ user: userId, todo_title: titleValue })
+            console.log("existing Title data:", title_data)
+            let filter_title_data = []
+            if (title_data.length > 0) {
+                console.log("Inside ttl dt if")
+                filter_title_data = title_data.filter(t_data => new Date(t_data.target_date).toDateString() == new Date(dateValue).toDateString())
+            }
 
-            // if (filter_title_data.length > 0)
-            //     return res.status(400).json({ message: "There is a similar Title available for the same day, kindly review" })
+            console.log("Filtered data:", filter_title_data)
 
-            const updateTodoData = await todoSchema.findByIdAndUpdate(id, {
-                todo_title,
-                todo_list,
-                todo_status,
-                target_date
-            })
+            if (filter_title_data.length > 0) {//validation works only for todo_title
+                if (todo_title) {
+                    return res.status(400).json({ message: "There is a similar Title available for the same day, kindly review" })
+                }
+                else if (target_date) {
+                    return res.status(400).json({ message: "There is a similar Title available for the same day, kindly review" })
+                }
+                else {
+                    console.log("##inside fltr data condn##")
+                    const updateTodoData = await todoSchema.findByIdAndUpdate(id, {
+                        todo_title: titleValue,
+                        todo_list: todo_list ? todo_list : existing_todoData.todo_list,
+                        todo_status: todo_status ? todo_status : existing_todoData.todo_status,
+                        target_date: dateValue
+                    })
+                    return res.status(200).json({ message: "Todo Updated successfully" })
+                }
+            }
+            else {
+                console.log("##inside fltr data condn##")
+                const updateTodoData = await todoSchema.findByIdAndUpdate(id, {
+                    todo_title: titleValue,
+                    todo_list: todo_list ? todo_list : existing_todoData.todo_list,
+                    todo_status: todo_status ? todo_status : existing_todoData.todo_status,
+                    target_date: dateValue
+                })
+                return res.status(200).json({ message: "Todo Updated successfully" })
+            }
 
-            res.status(200).json({ message: "Todo Updated successfully"})
-
-        } catch (error) {
-            res.status(500).json({ message: "Unable to modify Todo" })
-        }
+        } catch(error) {
+        res.status(500).json({ message: "Unable to modify Todo" })
     }
+}
 }
 
 module.exports = todoController
