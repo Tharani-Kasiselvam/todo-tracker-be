@@ -23,14 +23,15 @@ const todoController = {
 
             let curr_date = new Date()
 
-            //Validate Target Date with Current Date
+            //Validates Target Date with Current Date
             if (new Date(target_date) < new Date(curr_date))
                 return res.status(400).json({ message: "Target Date is a Past date, kindly verify" })
 
-            //Validates Duplication of Todo Title
-            const title_data = await todoSchema.find({ todo_title: todo_title })
+            //Validates Duplication of Todo Title and ignores if already Completed
+            const title_data = await todoSchema.find({ user: id, todo_title: todo_title })
             const filter_title_data = title_data.filter(t_data => t_data.todo_title == todo_title &&
-                new Date(t_data.target_date).toDateString() == new Date(target_date).toDateString())
+                new Date(t_data.target_date).toDateString() == new Date(target_date).toDateString()
+                && t_data.todo_status != 'Completed') 
 
             if (filter_title_data.length > 0)
                 return res.status(400).json({ message: "There is a similar Title available for the same day, kindly review" })
@@ -54,10 +55,7 @@ const todoController = {
         const { id } = req.params
         const { todo_title, todo_list, todo_status, target_date } = req.body
 
-        console.log("latest:", todo_title)
-
-
-        //manually created
+        //manually assigned with registered UserId
         const userId = "67f149e115234418a0fe8645"
 
         console.log("#ID#: ", id)
@@ -84,36 +82,39 @@ const todoController = {
             const dateValue = (target_date ? target_date : existing_todoData.target_date)
             const titleValue = (todo_title ? todo_title : existing_todoData.todo_title)
 
-            console.log("updated Tar dateValue:", dateValue, "CURR dt:", curr_date)
+            if(existing_todoData.todo_status=='Completed')
+                return res.status(402).json({ message: "This Todo already in Completed Status" })
+
 
             //Validate Target Date with Current Date
             if (dateValue && new Date(dateValue) < new Date(curr_date)) {
-                // dateValue = target_date
-                console.log("**inside if of taraget date validation**")
                 return res.status(400).json({ message: "Target Date is a Past date, kindly verify" })
             }
 
             // Validation of Duplicate Todo Title
-            console.log("updated title:", todo_title, "EXISTING title:", titleValue)
             const title_data = await todoSchema.find({ user: userId, todo_title: titleValue })
             console.log("existing Title data:", title_data)
             let filter_title_data = []
+
             if (title_data.length > 0) {
-                console.log("Inside ttl dt if")
-                filter_title_data = title_data.filter(t_data => new Date(t_data.target_date).toDateString() == new Date(dateValue).toDateString())
+                //validates the given date and ignores Completed Todo data
+                filter_title_data = title_data.filter(t_data => 
+                    new Date(t_data.target_date).toDateString() == new Date(dateValue).toDateString()
+                    && t_data.todo_status != 'Completed') 
             }
 
             console.log("Filtered data:", filter_title_data)
 
-            if (filter_title_data.length > 0) {//validation works only for todo_title
+            if (filter_title_data.length > 0) {
+                //Filtered data contains Not Completed todos that matches Title and Date, modification of similar title is restricted
                 if (todo_title) {
-                    return res.status(400).json({ message: "There is a similar Title available for the same day, kindly review" })
+                    return res.status(400).json({ message: "There is a similar Todo Data available, kindly review and raise a new request" })
                 }
                 else if (target_date) {
-                    return res.status(400).json({ message: "There is a similar Title available for the same day, kindly review" })
+                    return res.status(400).json({ message: "There is a similar Todo Data available for the same day, kindly review" })
                 }
+                
                 else {
-                    console.log("##inside fltr data condn##")
                     const updateTodoData = await todoSchema.findByIdAndUpdate(id, {
                         todo_title: titleValue,
                         todo_list: todo_list ? todo_list : existing_todoData.todo_list,
@@ -124,7 +125,6 @@ const todoController = {
                 }
             }
             else {
-                console.log("##inside fltr data condn##")
                 const updateTodoData = await todoSchema.findByIdAndUpdate(id, {
                     todo_title: titleValue,
                     todo_list: todo_list ? todo_list : existing_todoData.todo_list,
