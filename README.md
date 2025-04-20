@@ -12,7 +12,7 @@
 *Get Todo Data* : http://localhost:3001/api/v1/all-todos    
 
 
-***Functionality:***
+***Functionality:***   
 &emsp;a. *mongoose* - to connect with MongoDB, DB Model creation and the schema connectivity to fetch the Collections. 
 &emsp;b. *express* - to create express server.     
 &emsp;c. *morgan* - to enable logger.   
